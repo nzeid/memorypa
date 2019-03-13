@@ -1,0 +1,6 @@
+EXPORTS
+  memorypa_alignment
+  malloc
+  calloc
+  realloc
+  free
