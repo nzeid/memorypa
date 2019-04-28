@@ -41,6 +41,16 @@
 extern "C" {
 #endif
 
+#ifdef _MSC_VER
+#define MEMORYPA_WRITE _write
+#define MEMORYPA_FILENO _fileno
+#else
+#define MEMORYPA_WRITE write
+#define MEMORYPA_FILENO fileno
+#endif
+
+#define MEMORYPA_WRITE_OPTION_STDOUT 0
+#define MEMORYPA_WRITE_OPTION_STDERR 1
 #define MEMORYPA_INITIALIZER_SLAB_SIZE 1024
 
 const size_t memorypa_one = 1;
@@ -59,6 +69,10 @@ typedef struct {
   size_t own_relative_position;
 } memorypa_pool_options;
 
+int memorypa_write(int option, const void *buffer, unsigned int count);
+int memorypa_write_decimal(size_t number, unsigned int right_align, int write_option);
+int memorypa_write_hex(size_t number, unsigned int right_align, int write_option);
+int memorypa_write_message(const char *message, int write_option);
 unsigned char memorypa_initialize();
 unsigned char memorypa_pools_are_invalid();
 void memorypa_destroy();

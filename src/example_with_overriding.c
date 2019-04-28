@@ -83,14 +83,9 @@ void * malloc(size_t size) throw() {
 #else
 void * malloc(size_t size) {
 #endif
-  char buffer[100];
-  #ifdef _MSC_VER
-  sprintf_s(buffer, 100, "malloc - %zu bytes\n", size);
-  _write(1, buffer, strlen(buffer));
-  #else
-  sprintf(buffer, "malloc - %zu bytes\n", size);
-  write(1, buffer, strlen(buffer));
-  #endif
+  memorypa_write_message("malloc - ", MEMORYPA_WRITE_OPTION_STDOUT);
+  memorypa_write_decimal(size, 0, MEMORYPA_WRITE_OPTION_STDOUT);
+  memorypa_write_message(" bytes\n", MEMORYPA_WRITE_OPTION_STDOUT);
   return memorypa_malloc(size);
 }
 
@@ -99,14 +94,11 @@ void * calloc(size_t amount, size_t unit_size) throw() {
 #else
 void * calloc(size_t amount, size_t unit_size) {
 #endif
-  char buffer[100];
-  #ifdef _MSC_VER
-  sprintf_s(buffer, 100, "calloc - %zu of size %zu bytes\n", amount, unit_size);
-  _write(1, buffer, strlen(buffer));
-  #else
-  sprintf(buffer, "calloc - %zu of size %zu bytes\n", amount, unit_size);
-  write(1, buffer, strlen(buffer));
-  #endif
+  memorypa_write_message("calloc - ", MEMORYPA_WRITE_OPTION_STDOUT);
+  memorypa_write_decimal(amount, 0, MEMORYPA_WRITE_OPTION_STDOUT);
+  memorypa_write_message(" of size ", MEMORYPA_WRITE_OPTION_STDOUT);
+  memorypa_write_decimal(unit_size, 0, MEMORYPA_WRITE_OPTION_STDOUT);
+  memorypa_write_message(" bytes\n", MEMORYPA_WRITE_OPTION_STDOUT);
   return memorypa_calloc(amount, unit_size);
 }
 
@@ -115,14 +107,11 @@ void * realloc(void *data, size_t new_size) throw() {
 #else
 void * realloc(void *data, size_t new_size) {
 #endif
-  char buffer[100];
-  #ifdef _MSC_VER
-  sprintf_s(buffer, 100, "realloc - pointer %p to %zu bytes\n", data, new_size);
-  _write(1, buffer, strlen(buffer));
-  #else
-  sprintf(buffer, "realloc - pointer %p to %zu bytes\n", data, new_size);
-  write(1, buffer, strlen(buffer));
-  #endif
+  memorypa_write_message("realloc - pointer ", MEMORYPA_WRITE_OPTION_STDOUT);
+  memorypa_write_hex((size_t)data, 0, MEMORYPA_WRITE_OPTION_STDOUT);
+  memorypa_write_message(" to ", MEMORYPA_WRITE_OPTION_STDOUT);
+  memorypa_write_decimal(new_size, 0, MEMORYPA_WRITE_OPTION_STDOUT);
+  memorypa_write_message(" bytes\n", MEMORYPA_WRITE_OPTION_STDOUT);
   return memorypa_realloc(data, new_size);
 }
 
@@ -131,16 +120,9 @@ void free(void *data) throw() {
 #else
 void free(void *data) {
 #endif
-  if(data != NULL) {
-    char buffer[100];
-    #ifdef _MSC_VER
-    sprintf_s(buffer, 100, "free - pointer %p\n", data);
-    _write(1, buffer, strlen(buffer));
-    #else
-    sprintf(buffer, "free - pointer %p\n", data);
-    write(1, buffer, strlen(buffer));
-    #endif
-  }
+  memorypa_write_message("free - pointer ", MEMORYPA_WRITE_OPTION_STDOUT);
+  memorypa_write_hex((size_t)data, 0, MEMORYPA_WRITE_OPTION_STDOUT);
+  memorypa_write_message("\n", MEMORYPA_WRITE_OPTION_STDOUT);
   memorypa_free(data);
 }
 
@@ -149,14 +131,11 @@ int posix_memalign(void **data_pointer, size_t alignment, size_t size) throw() {
 #else
 int posix_memalign(void **data_pointer, size_t alignment, size_t size) {
 #endif
-  char buffer[100];
-  #ifdef _MSC_VER
-  sprintf_s(buffer, 100, "posix_memalign - %zu bytes with alignment of %zu\n", size, alignment);
-  _write(1, buffer, strlen(buffer));
-  #else
-  sprintf(buffer, "posix_memalign - %zu bytes with alignment of %zu\n", size, alignment);
-  write(1, buffer, strlen(buffer));
-  #endif
+  memorypa_write_message("posix_memalign - ", MEMORYPA_WRITE_OPTION_STDOUT);
+  memorypa_write_decimal(size, 0, MEMORYPA_WRITE_OPTION_STDOUT);
+  memorypa_write_message(" bytes with alignment of ", MEMORYPA_WRITE_OPTION_STDOUT);
+  memorypa_write_decimal(alignment, 0, MEMORYPA_WRITE_OPTION_STDOUT);
+  memorypa_write_message("\n", MEMORYPA_WRITE_OPTION_STDOUT);
   *data_pointer = memorypa_aligned_malloc(alignment, size);
   return (*data_pointer == NULL) ? ENOMEM : 0;
 }

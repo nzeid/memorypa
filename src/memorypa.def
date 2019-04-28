@@ -1,6 +1,10 @@
 LIBRARY memorypa
 EXPORTS
   memorypa_one
+  memorypa_write
+  memorypa_write_decimal
+  memorypa_write_hex
+  memorypa_write_message
   memorypa_initialize
   memorypa_pools_are_invalid
   memorypa_destroy

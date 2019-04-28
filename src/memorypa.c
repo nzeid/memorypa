@@ -378,11 +378,19 @@ static inline void memorypa_profile_deallocate_real(unsigned char *real) {
 
 static inline unsigned char memorypa_pool_block_is_invalid(unsigned char *block, unsigned char *assigned_pool) {
   if(memorypa_pool_block_get_pool(block) != assigned_pool) {
-    fprintf(stderr, "memorypa: Block %p of pool %p has the incorrect pool!\n", block, assigned_pool);
+    memorypa_write_message("memorypa: Block ", MEMORYPA_WRITE_OPTION_STDERR);
+    memorypa_write_hex((size_t)block, 0, MEMORYPA_WRITE_OPTION_STDERR);
+    memorypa_write_message(" of pool ", MEMORYPA_WRITE_OPTION_STDERR);
+    memorypa_write_hex((size_t)assigned_pool, 0, MEMORYPA_WRITE_OPTION_STDERR);
+    memorypa_write_message(" has the incorrect pool!\n", MEMORYPA_WRITE_OPTION_STDERR);
     return 1;
   }
   if(memorypa_pool_block_get_terminator(block)) {
-    fprintf(stderr, "memorypa: Block %p of pool %p has an invalid terminator!\n", block, assigned_pool);
+    memorypa_write_message("memorypa: Block ", MEMORYPA_WRITE_OPTION_STDERR);
+    memorypa_write_hex((size_t)block, 0, MEMORYPA_WRITE_OPTION_STDERR);
+    memorypa_write_message(" of pool ", MEMORYPA_WRITE_OPTION_STDERR);
+    memorypa_write_hex((size_t)assigned_pool, 0, MEMORYPA_WRITE_OPTION_STDERR);
+    memorypa_write_message(" has an invalid terminator!\n", MEMORYPA_WRITE_OPTION_STDERR);
     return 2;
   }
   return 0;
@@ -399,7 +407,9 @@ static inline unsigned char memorypa_pool_free_block_is_invalid(unsigned char *f
 
 static inline unsigned char memorypa_pool_is_invalid(unsigned char *pool, size_t *output_size) {
   if(memorypa_pool_lock_load(pool) > 1) {
-    fprintf(stderr, "memorypa: Pool %p has invalid lock value!\n", pool);
+    memorypa_write_message("memorypa: Pool ", MEMORYPA_WRITE_OPTION_STDERR);
+    memorypa_write_hex((size_t)pool, 0, MEMORYPA_WRITE_OPTION_STDERR);
+    memorypa_write_message(" has invalid lock value!\n", MEMORYPA_WRITE_OPTION_STDERR);
     return 1;
   }
   memorypa_pool_lock(pool);
@@ -407,7 +417,14 @@ static inline unsigned char memorypa_pool_is_invalid(unsigned char *pool, size_t
   size_t block_padding = memorypa_pool_get_block_padding(pool);
   size_t power_of_two = block_size - block_padding + 1;
   if(power_of_two & (power_of_two - 1)) {
-    fprintf(stderr, "memorypa: Pool %p has invalid block size (%zu) and padding (%zu)!\n", pool, block_size, block_padding);
+    memorypa_write_message("memorypa: Pool ", MEMORYPA_WRITE_OPTION_STDERR);
+    memorypa_write_hex((size_t)pool, 0, MEMORYPA_WRITE_OPTION_STDERR);
+    memorypa_write_message(" has invalid block size (", MEMORYPA_WRITE_OPTION_STDERR);
+    memorypa_write_decimal(block_size, 0, MEMORYPA_WRITE_OPTION_STDERR);
+    memorypa_write_message(") and padding (", MEMORYPA_WRITE_OPTION_STDERR);
+    memorypa_write_decimal(block_padding, 0, MEMORYPA_WRITE_OPTION_STDERR);
+    memorypa_write_message(")!\n", MEMORYPA_WRITE_OPTION_STDERR);
+    memorypa_pool_unlock(pool);
     return 2;
   }
   size_t block_amount = memorypa_pool_get_block_amount(pool);
@@ -424,7 +441,9 @@ static inline unsigned char memorypa_pool_is_invalid(unsigned char *pool, size_t
     ++i;
   }
   if(counted_free_blocks != free_blocks) {
-    fprintf(stderr, "memorypa: Pool %p has invalid free block amount!\n", pool);
+    memorypa_write_message("memorypa: Pool ", MEMORYPA_WRITE_OPTION_STDERR);
+    memorypa_write_hex((size_t)pool, 0, MEMORYPA_WRITE_OPTION_STDERR);
+    memorypa_write_message(" has invalid free block amount!\n", MEMORYPA_WRITE_OPTION_STDERR);
     memorypa_pool_unlock(pool);
     return 4;
   }
@@ -491,7 +510,7 @@ static inline void memorypa_pools_initialize(memorypa_pool_options *sets_of_opti
       sets_of_options[i].own_relative_position = memorypa_everything_size;
       memorypa_everything_size += sets_of_options[i].own_size;
       if(j < memorypa_size_t_bit_size && sets_of_options[j].power && sets_of_options[i].power >= sets_of_options[j].power) {
-        fprintf(stderr, "memorypa: Invalid options! Specified powers must be unique and in ascending order!\n");
+        memorypa_write_message("memorypa: Invalid options! Specified powers must be unique and in ascending order!\n", MEMORYPA_WRITE_OPTION_STDERR);
         exit(EXIT_FAILURE);
       }
     }
@@ -583,11 +602,19 @@ static inline unsigned char * memorypa_own_malloc(size_t size) {
       output = memorypa_pool_block_get_data(output);
     }
     else {
-      fprintf(stderr, "memorypa: Pool #%zu is out of memory for size %zu!\n", power, size);
+      memorypa_write_message("memorypa: Pool #", MEMORYPA_WRITE_OPTION_STDERR);
+      memorypa_write_decimal(power, 0, MEMORYPA_WRITE_OPTION_STDERR);
+      memorypa_write_message(" is out of memory for size ", MEMORYPA_WRITE_OPTION_STDERR);
+      memorypa_write_decimal(size, 0, MEMORYPA_WRITE_OPTION_STDERR);
+      memorypa_write_message("!\n", MEMORYPA_WRITE_OPTION_STDERR);
     }
   }
   else {
-    fprintf(stderr, "memorypa: Pool #%zu has not been initialized for size %zu!\n", power, size);
+    memorypa_write_message("memorypa: Pool #", MEMORYPA_WRITE_OPTION_STDERR);
+    memorypa_write_decimal(power, 0, MEMORYPA_WRITE_OPTION_STDERR);
+    memorypa_write_message(" has not been initialized for size ", MEMORYPA_WRITE_OPTION_STDERR);
+    memorypa_write_decimal(size, 0, MEMORYPA_WRITE_OPTION_STDERR);
+    memorypa_write_message("!\n", MEMORYPA_WRITE_OPTION_STDERR);
   }
   return output;
 }
@@ -661,11 +688,19 @@ static inline unsigned char * memorypa_own_realloc(unsigned char *data, size_t n
       memorypa_pool_deallocate(block);
     }
     else {
-      fprintf(stderr, "memorypa: Pool #%zu is out of memory for size %zu!\n", power, new_size);
+      memorypa_write_message("memorypa: Pool #", MEMORYPA_WRITE_OPTION_STDERR);
+      memorypa_write_decimal(power, 0, MEMORYPA_WRITE_OPTION_STDERR);
+      memorypa_write_message(" is out of memory for size ", MEMORYPA_WRITE_OPTION_STDERR);
+      memorypa_write_decimal(new_size, 0, MEMORYPA_WRITE_OPTION_STDERR);
+      memorypa_write_message("!\n", MEMORYPA_WRITE_OPTION_STDERR);
     }
     return new_data;
   }
-  fprintf(stderr, "memorypa: Pool #%zu has not been initialized for size %zu!\n", power, new_size);
+  memorypa_write_message("memorypa: Pool #", MEMORYPA_WRITE_OPTION_STDERR);
+  memorypa_write_decimal(power, 0, MEMORYPA_WRITE_OPTION_STDERR);
+  memorypa_write_message(" has not been initialized for size ", MEMORYPA_WRITE_OPTION_STDERR);
+  memorypa_write_decimal(new_size, 0, MEMORYPA_WRITE_OPTION_STDERR);
+  memorypa_write_message("!\n", MEMORYPA_WRITE_OPTION_STDERR);
   return NULL;
 }
 
@@ -715,10 +750,18 @@ static inline unsigned char * memorypa_own_aligned_realloc(unsigned char *data, 
       memorypa_pool_deallocate(block);
       return new_data;
     }
-    fprintf(stderr, "memorypa: Pool #%zu is out of memory for size %zu!\n", power, new_size);
+    memorypa_write_message("memorypa: Pool #", MEMORYPA_WRITE_OPTION_STDERR);
+    memorypa_write_decimal(power, 0, MEMORYPA_WRITE_OPTION_STDERR);
+    memorypa_write_message(" is out of memory for size ", MEMORYPA_WRITE_OPTION_STDERR);
+    memorypa_write_decimal(new_size, 0, MEMORYPA_WRITE_OPTION_STDERR);
+    memorypa_write_message("!\n", MEMORYPA_WRITE_OPTION_STDERR);
     return new_default_data;
   }
-  fprintf(stderr, "memorypa: Pool #%zu has not been initialized for size %zu!\n", power, new_size);
+  memorypa_write_message("memorypa: Pool #", MEMORYPA_WRITE_OPTION_STDERR);
+  memorypa_write_decimal(power, 0, MEMORYPA_WRITE_OPTION_STDERR);
+  memorypa_write_message(" has not been initialized for size ", MEMORYPA_WRITE_OPTION_STDERR);
+  memorypa_write_decimal(new_size, 0, MEMORYPA_WRITE_OPTION_STDERR);
+  memorypa_write_message("!\n", MEMORYPA_WRITE_OPTION_STDERR);
   return NULL;
 }
 
@@ -744,30 +787,82 @@ static inline void memorypa_own_profile_realloc_copy(unsigned char *data, unsign
   memorypa_profile_deallocate_real(real);
 }
 
+int memorypa_write(int write_option, const void *buffer, unsigned int count) {
+  switch(write_option) {
+    case MEMORYPA_WRITE_OPTION_STDOUT:
+      return MEMORYPA_WRITE(MEMORYPA_FILENO(stdout), buffer, count);
+    case MEMORYPA_WRITE_OPTION_STDERR:
+      return MEMORYPA_WRITE(MEMORYPA_FILENO(stderr), buffer, count);
+  }
+  return MEMORYPA_WRITE(MEMORYPA_FILENO(stdout), buffer, count);
+}
+
+int memorypa_write_decimal(size_t number, unsigned int right_align, int write_option) {
+  unsigned char digits[20];
+  memset(digits, ' ', 20);
+  unsigned char *digit_index = digits + 20;
+  unsigned char digit;
+  do {
+    digit = number % 10;
+    digit += 48;
+    *(--digit_index) = digit;
+  }
+  while((number /= 10));
+  unsigned int output_size = (unsigned int)(digits + 20 - digit_index);
+  if(right_align > output_size && right_align <= 20) {
+    digit_index = digits + 20 - right_align;
+    output_size = right_align;
+  }
+  return memorypa_write(write_option, digit_index, output_size);
+}
+
+int memorypa_write_hex(size_t number, unsigned int right_align, int write_option) {
+  unsigned char digits[16];
+  memset(digits, '0', 16);
+  unsigned char *digit_index = digits + 16;
+  unsigned char digit;
+  do {
+    digit = number & 15;
+    digit += digit < 10 ? 48 : 55;
+    *(--digit_index) = digit;
+  }
+  while((number >>= 4));
+  unsigned int output_size = (unsigned int)(digits + 16 - digit_index);
+  if(right_align > output_size && right_align <= 16) {
+    digit_index = digits + 16 - right_align;
+    output_size = right_align;
+  }
+  return memorypa_write(write_option, digit_index, output_size);
+}
+
+int memorypa_write_message(const char *message, int write_option) {
+  return memorypa_write(write_option, message, (unsigned int)(strlen(message)));
+}
+
 unsigned char memorypa_initialize() {
   // Test atomic functions:
   unsigned char lock = 0;
   if(memorypa_lock_test_set(&lock) != 0 || lock != 1) {
-    fprintf(stderr, "memorypa: Lock test from 0 to 1 failed!\n");
+    memorypa_write_message("memorypa: Lock test from 0 to 1 failed!\n", MEMORYPA_WRITE_OPTION_STDERR);
     exit(EXIT_FAILURE);
   }
   if(memorypa_lock_load(&lock) != 1) {
-    fprintf(stderr, "memorypa: Lock test loading 1 failed!\n");
+    memorypa_write_message("memorypa: Lock test loading 1 failed!\n", MEMORYPA_WRITE_OPTION_STDERR);
     exit(EXIT_FAILURE);
   }
   lock = 1;
   if(memorypa_lock_test_set(&lock) != 1 || lock != 1) {
-    fprintf(stderr, "memorypa: Lock test from 1 to 1 failed!\n");
+    memorypa_write_message("memorypa: Lock test from 1 to 1 failed!\n", MEMORYPA_WRITE_OPTION_STDERR);
     exit(EXIT_FAILURE);
   }
   lock = 1;
   memorypa_unlock_clear(&lock);
   if(lock != 0) {
-    fprintf(stderr, "memorypa: Lock test from 1 to 0 failed!\n");
+    memorypa_write_message("memorypa: Lock test from 1 to 0 failed!\n", MEMORYPA_WRITE_OPTION_STDERR);
     exit(EXIT_FAILURE);
   }
   if(memorypa_lock_load(&lock) != 0) {
-    fprintf(stderr, "memorypa: Lock test loading 0 failed!\n");
+    memorypa_write_message("memorypa: Lock test loading 0 failed!\n", MEMORYPA_WRITE_OPTION_STDERR);
     exit(EXIT_FAILURE);
   }
   // Test locks:
@@ -828,7 +923,7 @@ unsigned char memorypa_initialize() {
       sets_of_pool_options = sets_of_pool_options_64;
       break;
     default:
-      fprintf(stderr, "memorypa: Non-standard size for machine word! (1)\n");
+      memorypa_write_message("memorypa: Non-standard size for machine word! (1)\n", MEMORYPA_WRITE_OPTION_STDERR);
       exit(EXIT_FAILURE);
   }
   memset(sets_of_pool_options, 0, memorypa_size_t_bit_size * sizeof(memorypa_pool_options));
@@ -859,12 +954,12 @@ unsigned char memorypa_initialize() {
     memorypa_mhash_second_magic = 2654435761u;
   }
   else {
-    fprintf(stderr, "memorypa: Non-standard size for machine word! (2)\n");
+    memorypa_write_message("memorypa: Non-standard size for machine word! (2)\n", MEMORYPA_WRITE_OPTION_STDERR);
     exit(EXIT_FAILURE);
   }
   // Test thread ID fetching:
   if(!memorypa_own_get_thread_id()) {
-    fprintf(stderr, "memorypa: Failed to get positive thread ID!\n");
+    memorypa_write_message("memorypa: Failed to get positive thread ID!\n", MEMORYPA_WRITE_OPTION_STDERR);
     exit(EXIT_FAILURE);
   }
   // Prepare the pool:
@@ -898,7 +993,11 @@ unsigned char memorypa_pools_are_invalid() {
   }
   while(total_size < memorypa_everything_size);
   if(total_size != memorypa_everything_size) {
-    fprintf(stderr, "memorypa: The calculated total size is off: %zu vs. %zu!\n", total_size, memorypa_everything_size);
+    memorypa_write_message("memorypa: The calculated total size is off: ", MEMORYPA_WRITE_OPTION_STDERR);
+    memorypa_write_decimal(total_size, 0, MEMORYPA_WRITE_OPTION_STDERR);
+    memorypa_write_message(" vs. ", MEMORYPA_WRITE_OPTION_STDERR);
+    memorypa_write_decimal(memorypa_everything_size, 0, MEMORYPA_WRITE_OPTION_STDERR);
+    memorypa_write_message("!\n", MEMORYPA_WRITE_OPTION_STDERR);
     return 3;
   }
   return 0;
@@ -1184,8 +1283,8 @@ void memorypa_profile_print() {
   size_t i = 0;
   size_t padding, count, max;
   unsigned char *pool;
-  printf("memorypa: Current profile:\n");
-  printf("memorypa:   Power   Padding     Count       Max\n");
+  memorypa_write_message("memorypa: Current profile:\n", MEMORYPA_WRITE_OPTION_STDOUT);
+  memorypa_write_message("memorypa:   Power   Padding     Count       Max\n", MEMORYPA_WRITE_OPTION_STDOUT);
   do {
     memorypa_lock(&memorypa_profile_lock);
     pool = memorypa_pool_list[i];
@@ -1194,7 +1293,15 @@ void memorypa_profile_print() {
     max = memorypa_profile_get_max(i);
     memorypa_unlock(&memorypa_profile_lock);
     if(max) {
-      printf("memorypa: %7zu   %7zu   %7zu   %7zu\n", i, padding, count, max);
+      memorypa_write_message("memorypa: ", MEMORYPA_WRITE_OPTION_STDOUT);
+      memorypa_write_decimal(i, 7, MEMORYPA_WRITE_OPTION_STDOUT);
+      memorypa_write_message("   ", MEMORYPA_WRITE_OPTION_STDOUT);
+      memorypa_write_decimal(padding, 7, MEMORYPA_WRITE_OPTION_STDOUT);
+      memorypa_write_message("   ", MEMORYPA_WRITE_OPTION_STDOUT);
+      memorypa_write_decimal(count, 7, MEMORYPA_WRITE_OPTION_STDOUT);
+      memorypa_write_message("   ", MEMORYPA_WRITE_OPTION_STDOUT);
+      memorypa_write_decimal(max, 7, MEMORYPA_WRITE_OPTION_STDOUT);
+      memorypa_write_message("\n", MEMORYPA_WRITE_OPTION_STDOUT);
     }
   }
   while(++i < memorypa_size_t_bit_size);

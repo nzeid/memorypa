@@ -22,14 +22,9 @@ void * malloc(size_t size) throw() {
 #else
 void * malloc(size_t size) {
 #endif
-  char buffer[100];
-  #ifdef _MSC_VER
-  sprintf_s(buffer, 100, "memorypa_aligned_overrider.c - malloc - %zu bytes\n", size);
-  _write(1, buffer, strlen(buffer));
-  #else
-  sprintf(buffer, "memorypa_aligned_overrider.c - malloc - %zu bytes\n", size);
-  write(1, buffer, strlen(buffer));
-  #endif
+  memorypa_write_message("memorypa_aligned_overrider.c - malloc - ", MEMORYPA_WRITE_OPTION_STDOUT);
+  memorypa_write_decimal(size, 0, MEMORYPA_WRITE_OPTION_STDOUT);
+  memorypa_write_message(" bytes\n", MEMORYPA_WRITE_OPTION_STDOUT);
   return memorypa_aligned_malloc(memorypa_alignment, size);
 }
 
@@ -38,14 +33,11 @@ void * calloc(size_t amount, size_t unit_size) throw() {
 #else
 void * calloc(size_t amount, size_t unit_size) {
 #endif
-  char buffer[100];
-  #ifdef _MSC_VER
-  sprintf_s(buffer, 100, "memorypa_aligned_overrider.c - calloc - %zu of size %zu bytes\n", amount, unit_size);
-  _write(1, buffer, strlen(buffer));
-  #else
-  sprintf(buffer, "memorypa_aligned_overrider.c - calloc - %zu of size %zu bytes\n", amount, unit_size);
-  write(1, buffer, strlen(buffer));
-  #endif
+  memorypa_write_message("memorypa_aligned_overrider.c - calloc - ", MEMORYPA_WRITE_OPTION_STDOUT);
+  memorypa_write_decimal(amount, 0, MEMORYPA_WRITE_OPTION_STDOUT);
+  memorypa_write_message(" of size ", MEMORYPA_WRITE_OPTION_STDOUT);
+  memorypa_write_decimal(unit_size, 0, MEMORYPA_WRITE_OPTION_STDOUT);
+  memorypa_write_message(" bytes\n", MEMORYPA_WRITE_OPTION_STDOUT);
   return memorypa_aligned_calloc(memorypa_alignment, amount, unit_size);
 }
 
@@ -54,14 +46,11 @@ void * realloc(void *data, size_t new_size) throw() {
 #else
 void * realloc(void *data, size_t new_size) {
 #endif
-  char buffer[100];
-  #ifdef _MSC_VER
-  sprintf_s(buffer, 100, "memorypa_aligned_overrider.c - realloc - pointer %p to %zu bytes\n", data, new_size);
-  _write(1, buffer, strlen(buffer));
-  #else
-  sprintf(buffer, "memorypa_aligned_overrider.c - realloc - pointer %p to %zu bytes\n", data, new_size);
-  write(1, buffer, strlen(buffer));
-  #endif
+  memorypa_write_message("memorypa_aligned_overrider.c - realloc - pointer ", MEMORYPA_WRITE_OPTION_STDOUT);
+  memorypa_write_hex((size_t)data, 0, MEMORYPA_WRITE_OPTION_STDOUT);
+  memorypa_write_message(" to ", MEMORYPA_WRITE_OPTION_STDOUT);
+  memorypa_write_decimal(new_size, 0, MEMORYPA_WRITE_OPTION_STDOUT);
+  memorypa_write_message(" bytes\n", MEMORYPA_WRITE_OPTION_STDOUT);
   return memorypa_aligned_realloc(data, memorypa_alignment, new_size);
 }
 
@@ -70,15 +59,8 @@ void free(void *data) throw() {
 #else
 void free(void *data) {
 #endif
-  if(data != NULL) {
-    char buffer[100];
-    #ifdef _MSC_VER
-    sprintf_s(buffer, 100, "memorypa_aligned_overrider.c - free - pointer %p\n", data);
-    _write(1, buffer, strlen(buffer));
-    #else
-    sprintf(buffer, "memorypa_aligned_overrider.c - free - pointer %p\n", data);
-    write(1, buffer, strlen(buffer));
-    #endif
-  }
+  memorypa_write_message("memorypa_aligned_overrider.c - free - pointer ", MEMORYPA_WRITE_OPTION_STDOUT);
+  memorypa_write_hex((size_t)data, 0, MEMORYPA_WRITE_OPTION_STDOUT);
+  memorypa_write_message("\n", MEMORYPA_WRITE_OPTION_STDOUT);
   memorypa_free(data);
 }
