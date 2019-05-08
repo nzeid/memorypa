@@ -17,7 +17,7 @@
 # You should have received a copy of the GNU General Public License
 # along with Memorypa. If not, see <https://www.gnu.org/licenses/gpl.html>.
 
-if [ "$(printf %.8s "`basename $(pwd)`")" != "memorypa" ]; then
+if [ "$(printf %.8s "$(basename "$(pwd)")")" != "memorypa" ]; then
   printf "\nExecute the script from the root Memorypa directory.\n\n"
   exit 1;
 fi
