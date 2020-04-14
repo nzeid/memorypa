@@ -21,6 +21,7 @@ if [ "$(printf %.8s "$(basename "$(pwd)")")" != "memorypa" ]; then
   printf "\nExecute the script from the root Memorypa directory.\n\n"
   exit 1;
 fi
+mkdir -p bin lib64
 rm -f bin/lib64
 ln -sn ../lib64 bin/lib64
 gcc -c -O3 -std=c11 -Wpedantic -Wall -Wextra -Wpointer-arith -Werror=vla -m64 -fPIC -I./include -o lib64/libmemorypa.o src/memorypa.c

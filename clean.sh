@@ -21,4 +21,4 @@ if [ "$(printf %.8s "$(basename "$(pwd)")")" != "memorypa" ]; then
   printf "\nExecute the script from the root Memorypa directory.\n\n"
   exit 1;
 fi
-rm -vf bin/lib32 bin/lib64 bin/benchmark_* bin/example_* bin/test_* lib32/libmemorypa* lib64/libmemorypa*
+rm -vrf bin lib32 lib64

@@ -24,3 +24,4 @@ IF %current_directory:~0,8% NEQ memorypa (
 	goto:eof
 )
 FOR /F "tokens=*" %%g IN ('dir /s /b ".\win"') DO echo del "%%g" && del /Q "%%g"
+echo rmdir .\win && rmdir .\win

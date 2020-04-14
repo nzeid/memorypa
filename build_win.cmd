@@ -23,6 +23,7 @@ IF %current_directory:~0,8% NEQ memorypa (
 	echo Must be executed from the root Memorypa directory!
 	goto:eof
 )
+IF NOT EXIST .\win mkdir .\win
 cl /LD /MT /W4 /sdl /O2 /Fo".\win\memorypa.obj" /I include src\memorypa.c /link /DEF:".\src\memorypa.def" /IMPLIB:".\win\memorypa.lib" /OUT:".\win\memorypa.dll"
 cl /LD /MT /W4 /sdl /O2 /Fo".\win\memorypa_overrider.obj" /I include src\memorypa_overrider.c /link /DEF:".\src\memorypa_overrider.def" /IMPLIB:".\win\memorypa_overrider.lib" /OUT:".\win\memorypa_overrider.dll" ".\win\memorypa.lib"
 cl /LD /MT /W4 /sdl /O2 /Fo".\win\memorypa_aligned_overrider.obj" /I include src\memorypa_aligned_overrider.c /link /DEF:".\src\memorypa_overrider.def" /IMPLIB:".\win\memorypa_aligned_overrider.lib" /OUT:".\win\memorypa_aligned_overrider.dll" ".\win\memorypa.lib"
