@@ -29,7 +29,42 @@ __declspec(dllexport) void memorypa_initializer_options(memorypa_functions *func
 void memorypa_initializer_options(memorypa_functions *functions, memorypa_pool_options *sets_of_pool_options) {
 #endif
   functions->malloc = malloc;
+  functions->realloc = realloc;
   functions->free = free;
+#ifdef MEMORYPA_TEST_RESCUE
+  if(memorypa_get_size_t_size() > 4) {
+    sets_of_pool_options[0].power = 7;
+    sets_of_pool_options[0].amount = 500;
+    sets_of_pool_options[1].power = 8;
+    sets_of_pool_options[1].amount = 200;
+    sets_of_pool_options[2].power = 9;
+    sets_of_pool_options[2].amount = 200;
+    sets_of_pool_options[3].power = 10;
+    sets_of_pool_options[3].amount = 75;
+    sets_of_pool_options[4].power = 11;
+    // Test padding!
+    sets_of_pool_options[4].padding = 64;
+    //
+    sets_of_pool_options[4].amount = 400;
+    sets_of_pool_options[5].power = 12;
+    sets_of_pool_options[5].amount = 500;
+  }
+  else {
+    sets_of_pool_options[0].power = 7;
+    sets_of_pool_options[0].amount = 500;
+    sets_of_pool_options[1].power = 8;
+    sets_of_pool_options[1].amount = 200;
+    sets_of_pool_options[2].power = 9;
+    sets_of_pool_options[2].amount = 200;
+    sets_of_pool_options[3].power = 10;
+    sets_of_pool_options[3].amount = 75;
+    sets_of_pool_options[4].power = 11;
+    // Test padding!
+    sets_of_pool_options[4].padding = 64;
+    //
+    sets_of_pool_options[4].amount = 400;
+  }
+#else
   sets_of_pool_options[0].power = 7;
   sets_of_pool_options[0].amount = 500;
   sets_of_pool_options[1].power = 8;
@@ -47,6 +82,7 @@ void memorypa_initializer_options(memorypa_functions *functions, memorypa_pool_o
   sets_of_pool_options[5].amount = 500;
   sets_of_pool_options[6].power = 13;
   sets_of_pool_options[6].amount = 50;
+#endif
 }
 
 static size_t size_t_u_char_bit_diff = 0;
@@ -174,20 +210,24 @@ static unsigned char memorypa_test_check_block(void *block, size_t block_size, s
 }
 
 static void memorypa_test_allocation(unsigned char id) {
-  size_t blocks_size = memorypa_get_size_t_half_bit_size();
-  blocks_size <<= 5;
+  size_t blocks_size;
   void **blocks;
   size_t *blocks_sizes;
-  switch(blocks_size) {
-    case 512:
+  size_t multiple;
+  switch(memorypa_get_size_t_bit_size()) {
+    case 32:
       ;
-      void *blocks_32[512];
-      size_t blocks_sizes_32[512];
+      multiple = 3;
+      blocks_size = 1024;
+      void *blocks_32[1024];
+      size_t blocks_sizes_32[1024];
       blocks = blocks_32;
       blocks_sizes = blocks_sizes_32;
       break;
-    case 1024:
+    case 64:
       ;
+      multiple = 4;
+      blocks_size = 1024;
       void *blocks_64[1024];
       size_t blocks_sizes_64[1024];
       blocks = blocks_64;
@@ -197,7 +237,6 @@ static void memorypa_test_allocation(unsigned char id) {
       fprintf(stderr, "Non-standard size for machine word!\n");
       exit(EXIT_FAILURE);
   }
-  size_t multiple = 4;
   size_t i = 0;
   do {
     blocks[i] = NULL;

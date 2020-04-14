@@ -30,6 +30,7 @@ __declspec(dllexport) void memorypa_initializer_options(memorypa_functions *func
 void memorypa_initializer_options(memorypa_functions *functions, memorypa_pool_options *sets_of_pool_options) {
 #endif
   functions->malloc = malloc;
+  functions->realloc = realloc;
   functions->free = free;
   sets_of_pool_options[0].power = 11;
   sets_of_pool_options[0].amount = 100;

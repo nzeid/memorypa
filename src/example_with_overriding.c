@@ -47,12 +47,15 @@ void memorypa_initializer_options(memorypa_functions *functions, memorypa_pool_o
   #ifdef _MSC_VER
   HINSTANCE win_library = LoadLibrary(TEXT("msvcrt.dll"));
   functions->malloc = (void *(*)(size_t))GetProcAddress(win_library, "malloc");
+  functions->realloc = (void *(*)(void*,size_t))GetProcAddress(win_library, "realloc");
   functions->free = (void(*)(void*))GetProcAddress(win_library, "free");
   // FreeLibrary(win_library);
   #else
   // functions->malloc = (void *(*)(size_t))(dlsym(RTLD_NEXT, "malloc"));
+  // functions->realloc = (void *(*)(void*,size_t))(dlsym(RTLD_NEXT, "realloc"));
   // functions->free = (void (*)(void*))(dlsym(RTLD_NEXT, "free"));
   *(void **)(&(functions->malloc)) = dlsym(RTLD_NEXT, "malloc");
+  *(void **)(&(functions->realloc)) = dlsym(RTLD_NEXT, "realloc");
   *(void **)(&(functions->free)) = dlsym(RTLD_NEXT, "free");
   #endif
   // See "example_standard.c":

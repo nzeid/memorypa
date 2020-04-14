@@ -31,6 +31,7 @@ void memorypa_initializer_options(memorypa_functions *functions, memorypa_pool_o
     simply defer to "malloc" and "free".
   */
   functions->malloc = malloc;
+  functions->realloc = realloc;
   functions->free = free;
   /*
     Since we're only profiling, the only thing that needs to be configured

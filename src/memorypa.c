@@ -18,6 +18,7 @@
 #include "memorypa.h"
 
 static void *(*memorypa_given_malloc)(size_t) = NULL;
+static void *(*memorypa_given_realloc)(void*,size_t) = NULL;
 static void (*memorypa_given_free)(void*) = NULL;
 static unsigned char memorypa_initializing = 0;
 static unsigned char memorypa_initialized = 0;
@@ -520,6 +521,10 @@ static inline void memorypa_pools_initialize(memorypa_pool_options *sets_of_opti
     i = j;
   }
   memorypa_everything = memorypa_given_malloc(memorypa_everything_size);
+  if(memorypa_everything == NULL) {
+    memorypa_write_message("memorypa: Cannot initialize any pools because the given \"malloc\" returned null!\n", MEMORYPA_WRITE_OPTION_STDERR);
+    exit(EXIT_FAILURE);
+  }
   memset(memorypa_everything, 0, memorypa_everything_size);
   // Merely set the profile list (it's already zeroed out):
   memorypa_profile_list = memorypa_everything;
@@ -578,15 +583,46 @@ static inline unsigned char * memorypa_pool_allocate(unsigned char *pool) {
   return output;
 }
 
+static inline unsigned char * memorypa_rescue_allocate_for_data(size_t size) {
+  unsigned char *output = memorypa_given_malloc(memorypa_1ucp_2uc + size);
+  if(output != NULL) {
+    memorypa_pool_block_set_pool(output, NULL);
+    memorypa_pool_block_set_terminator(output);
+    output = memorypa_pool_block_get_data(output);
+  }
+  return output;
+}
+
+static inline unsigned char * memorypa_rescue_reallocate_for_default_data(unsigned char *block, size_t new_size) {
+  unsigned char *output = memorypa_given_realloc(block, memorypa_1ucp_2uc + new_size);
+  if(output != NULL) {
+    output = memorypa_pool_block_get_data(output);
+  }
+  return output;
+}
+
+static inline unsigned char * memorypa_rescue_reallocate_for_data(unsigned char *block, size_t new_size, size_t offset) {
+  unsigned char *output = memorypa_given_realloc(block, memorypa_1ucp_2uc + new_size + offset);
+  if(output != NULL) {
+    output = memorypa_pool_block_get_data(output) + offset;
+  }
+  return output;
+}
+
 static inline void memorypa_pool_deallocate(unsigned char *block) {
   unsigned char *pool = memorypa_pool_block_get_pool(block);
-  memorypa_pool_lock(pool);
-  size_t free_blocks = memorypa_pool_get_free_blocks(pool);
-  unsigned char *free_block = memorypa_pool_get_free_block_list(pool);
-  free_block = memorypa_pool_free_block_list_at(free_block, free_blocks);
-  memorypa_pool_free_block_set_block(free_block, block);
-  memorypa_pool_set_free_blocks(pool, ++free_blocks);
-  memorypa_pool_unlock(pool);
+  if(pool == NULL) {
+    memorypa_given_free(block);
+  }
+  else {
+    memorypa_pool_lock(pool);
+    size_t free_blocks = memorypa_pool_get_free_blocks(pool);
+    unsigned char *free_block = memorypa_pool_get_free_block_list(pool);
+    free_block = memorypa_pool_free_block_list_at(free_block, free_blocks);
+    memorypa_pool_free_block_set_block(free_block, block);
+    memorypa_pool_set_free_blocks(pool, ++free_blocks);
+    memorypa_pool_unlock(pool);
+  }
 }
 
 static inline unsigned char * memorypa_own_malloc(size_t size) {
@@ -602,19 +638,21 @@ static inline unsigned char * memorypa_own_malloc(size_t size) {
       output = memorypa_pool_block_get_data(output);
     }
     else {
+      output = memorypa_rescue_allocate_for_data(size);
       memorypa_write_message("memorypa: Pool #", MEMORYPA_WRITE_OPTION_STDERR);
       memorypa_write_decimal(power, 0, MEMORYPA_WRITE_OPTION_STDERR);
       memorypa_write_message(" is out of memory for size ", MEMORYPA_WRITE_OPTION_STDERR);
       memorypa_write_decimal(size, 0, MEMORYPA_WRITE_OPTION_STDERR);
-      memorypa_write_message("!\n", MEMORYPA_WRITE_OPTION_STDERR);
+      memorypa_write_message("! (1)\n", MEMORYPA_WRITE_OPTION_STDERR);
     }
   }
   else {
+    output = memorypa_rescue_allocate_for_data(size);
     memorypa_write_message("memorypa: Pool #", MEMORYPA_WRITE_OPTION_STDERR);
     memorypa_write_decimal(power, 0, MEMORYPA_WRITE_OPTION_STDERR);
     memorypa_write_message(" has not been initialized for size ", MEMORYPA_WRITE_OPTION_STDERR);
     memorypa_write_decimal(size, 0, MEMORYPA_WRITE_OPTION_STDERR);
-    memorypa_write_message("!\n", MEMORYPA_WRITE_OPTION_STDERR);
+    memorypa_write_message("! (2)\n", MEMORYPA_WRITE_OPTION_STDERR);
   }
   return output;
 }
@@ -663,45 +701,61 @@ static inline unsigned char * memorypa_own_realloc(unsigned char *data, size_t n
     return memorypa_own_malloc(new_size);
   }
   //
+  unsigned char *block = memorypa_pool_block_get_block_from_data(data);
+  unsigned char *pool = memorypa_pool_block_get_pool(block);
+  unsigned char *default_data = memorypa_pool_block_get_data(block);
+  if(pool == NULL) {
+    memorypa_write_message("memorypa: This is a rescued allocation! Using the given \"realloc\". (3)\n", MEMORYPA_WRITE_OPTION_STDERR);
+    return memorypa_rescue_reallocate_for_data(block, new_size, data - default_data);
+  }
   size_t power = memorypa_own_msb(new_size);
   unsigned char *new_pool = memorypa_pool_list[power - 1];
   if(new_pool != NULL) {
     power = memorypa_adjust_msb(new_size, power, memorypa_pool_get_block_padding(new_pool));
   }
   new_pool = memorypa_pool_list[power];
-  if(new_pool != NULL) {
-    unsigned char *block = memorypa_pool_block_get_block_from_data(data);
-    unsigned char *pool = memorypa_pool_block_get_pool(block);
-    unsigned char *default_data = memorypa_pool_block_get_data(block);
-    if(pool == new_pool) {
-      if(default_data != data) {
-        size_t offset_size = memorypa_pool_get_block_size(pool) - (data - default_data);
-        memmove(default_data, data, offset_size < new_size ? offset_size : new_size);
-      }
-      return default_data;
-    }
-    unsigned char *new_data = memorypa_pool_allocate(new_pool);
+  if(new_pool == NULL) {
+    unsigned char *new_data = memorypa_rescue_allocate_for_data(new_size);
     if(new_data != NULL) {
-      new_data = memorypa_pool_block_get_data(new_data);
       size_t offset_size = memorypa_pool_get_block_size(pool) - (data - default_data);
       memcpy(new_data, data, offset_size < new_size ? offset_size : new_size);
       memorypa_pool_deallocate(block);
     }
-    else {
-      memorypa_write_message("memorypa: Pool #", MEMORYPA_WRITE_OPTION_STDERR);
-      memorypa_write_decimal(power, 0, MEMORYPA_WRITE_OPTION_STDERR);
-      memorypa_write_message(" is out of memory for size ", MEMORYPA_WRITE_OPTION_STDERR);
-      memorypa_write_decimal(new_size, 0, MEMORYPA_WRITE_OPTION_STDERR);
-      memorypa_write_message("!\n", MEMORYPA_WRITE_OPTION_STDERR);
-    }
+    memorypa_write_message("memorypa: Pool #", MEMORYPA_WRITE_OPTION_STDERR);
+    memorypa_write_decimal(power, 0, MEMORYPA_WRITE_OPTION_STDERR);
+    memorypa_write_message(" has not been initialized for size ", MEMORYPA_WRITE_OPTION_STDERR);
+    memorypa_write_decimal(new_size, 0, MEMORYPA_WRITE_OPTION_STDERR);
+    memorypa_write_message("! (4)\n", MEMORYPA_WRITE_OPTION_STDERR);
     return new_data;
   }
-  memorypa_write_message("memorypa: Pool #", MEMORYPA_WRITE_OPTION_STDERR);
-  memorypa_write_decimal(power, 0, MEMORYPA_WRITE_OPTION_STDERR);
-  memorypa_write_message(" has not been initialized for size ", MEMORYPA_WRITE_OPTION_STDERR);
-  memorypa_write_decimal(new_size, 0, MEMORYPA_WRITE_OPTION_STDERR);
-  memorypa_write_message("!\n", MEMORYPA_WRITE_OPTION_STDERR);
-  return NULL;
+  if(pool == new_pool) {
+    if(default_data != data) {
+      size_t offset_size = memorypa_pool_get_block_size(pool) - (data - default_data);
+      memmove(default_data, data, offset_size < new_size ? offset_size : new_size);
+    }
+    return default_data;
+  }
+  unsigned char *new_data = memorypa_pool_allocate(new_pool);
+  if(new_data == NULL) {
+    new_data = memorypa_rescue_allocate_for_data(new_size);
+    if(new_data != NULL) {
+      size_t offset_size = memorypa_pool_get_block_size(pool) - (data - default_data);
+      memcpy(new_data, data, offset_size < new_size ? offset_size : new_size);
+      memorypa_pool_deallocate(block);
+    }
+    memorypa_write_message("memorypa: Pool #", MEMORYPA_WRITE_OPTION_STDERR);
+    memorypa_write_decimal(power, 0, MEMORYPA_WRITE_OPTION_STDERR);
+    memorypa_write_message(" is out of memory for size ", MEMORYPA_WRITE_OPTION_STDERR);
+    memorypa_write_decimal(new_size, 0, MEMORYPA_WRITE_OPTION_STDERR);
+    memorypa_write_message("! (5)\n", MEMORYPA_WRITE_OPTION_STDERR);
+  }
+  else {
+    new_data = memorypa_pool_block_get_data(new_data);
+    size_t offset_size = memorypa_pool_get_block_size(pool) - (data - default_data);
+    memcpy(new_data, data, offset_size < new_size ? offset_size : new_size);
+    memorypa_pool_deallocate(block);
+  }
+  return new_data;
 }
 
 static inline unsigned char * memorypa_own_aligned_realloc(unsigned char *data, size_t new_size, unsigned short alignment) {
@@ -711,58 +765,105 @@ static inline unsigned char * memorypa_own_aligned_realloc(unsigned char *data, 
   }
   //
   new_size += alignment - 1;
+  unsigned char *block = memorypa_pool_block_get_block_from_data(data);
+  unsigned char *pool = memorypa_pool_block_get_pool(block);
+  unsigned char *default_data = memorypa_pool_block_get_data(block);
+  if(pool == NULL) {
+    size_t offset = data - default_data;
+    default_data = memorypa_rescue_reallocate_for_default_data(block, new_size + offset);
+    if(default_data == NULL) {
+      return default_data;
+    }
+    data = default_data + offset;
+    size_t new_offset = (size_t)default_data & (alignment - 1);
+    if(new_offset) {
+      new_offset = alignment - new_offset;
+    }
+    unsigned char *new_data = default_data + new_offset;
+    if(new_data != data) {
+      new_size -= new_offset;
+      memmove(new_data, data, new_size);
+      memorypa_pool_block_set_data_offset(new_data, (unsigned short)new_offset);
+    }
+    memorypa_write_message("memorypa: This is a rescued allocation! Using the given \"realloc\". (6)\n", MEMORYPA_WRITE_OPTION_STDERR);
+    return new_data;
+  }
   size_t power = memorypa_own_msb(new_size);
   unsigned char *new_pool = memorypa_pool_list[power - 1];
   if(new_pool != NULL) {
     power = memorypa_adjust_msb(new_size, power, memorypa_pool_get_block_padding(new_pool));
   }
   new_pool = memorypa_pool_list[power];
-  if(new_pool != NULL) {
-    unsigned char *block = memorypa_pool_block_get_block_from_data(data);
-    unsigned char *pool = memorypa_pool_block_get_pool(block);
-    unsigned char *default_data = memorypa_pool_block_get_data(block);
-    if(pool == new_pool) {
-      size_t offset = (size_t)default_data & (alignment - 1);
+  if(new_pool == NULL) {
+    unsigned char *new_data = memorypa_rescue_allocate_for_data(new_size);
+    if(new_data != NULL) {
+      size_t offset = (size_t)new_data & (alignment - 1);
       if(offset) {
         offset = alignment - offset;
       }
-      unsigned char *new_data = default_data + offset;
-      new_size -= new_data - default_data;
-      if(new_data != data) {
-        size_t offset_size = memorypa_pool_get_block_size(pool) - (data - default_data);
-        memmove(new_data, data, offset_size < new_size ? offset_size : new_size);
-        memorypa_pool_block_set_data_offset(new_data, (unsigned short)offset);
-      }
-      return new_data;
-    }
-    unsigned char *new_default_data = memorypa_pool_allocate(new_pool);
-    if(new_default_data != NULL) {
-      new_default_data = memorypa_pool_block_get_data(new_default_data);
-      size_t offset = (size_t)new_default_data & (alignment - 1);
-      if(offset) {
-        offset = alignment - offset;
-      }
-      unsigned char *new_data = new_default_data + offset;
-      new_size -= new_data - new_default_data;
+      new_data += offset;
+      new_size -= offset;
       memorypa_pool_block_set_data_offset(new_data, (unsigned short)offset);
       size_t offset_size = memorypa_pool_get_block_size(pool) - (data - default_data);
       memcpy(new_data, data, offset_size < new_size ? offset_size : new_size);
       memorypa_pool_deallocate(block);
-      return new_data;
+    }
+    memorypa_write_message("memorypa: Pool #", MEMORYPA_WRITE_OPTION_STDERR);
+    memorypa_write_decimal(power, 0, MEMORYPA_WRITE_OPTION_STDERR);
+    memorypa_write_message(" has not been initialized for size ", MEMORYPA_WRITE_OPTION_STDERR);
+    memorypa_write_decimal(new_size, 0, MEMORYPA_WRITE_OPTION_STDERR);
+    memorypa_write_message("! (7)\n", MEMORYPA_WRITE_OPTION_STDERR);
+    return new_data;
+  }
+  if(pool == new_pool) {
+    size_t offset = (size_t)default_data & (alignment - 1);
+    if(offset) {
+      offset = alignment - offset;
+    }
+    unsigned char *new_data = default_data + offset;
+    if(new_data != data) {
+      new_size -= offset;
+      size_t offset_size = memorypa_pool_get_block_size(pool) - (data - default_data);
+      memmove(new_data, data, offset_size < new_size ? offset_size : new_size);
+      memorypa_pool_block_set_data_offset(new_data, (unsigned short)offset);
+    }
+    return new_data;
+  }
+  unsigned char *new_data = memorypa_pool_allocate(new_pool);
+  if(new_data == NULL) {
+    new_data = memorypa_rescue_allocate_for_data(new_size);
+    if(new_data != NULL) {
+      size_t offset = (size_t)new_data & (alignment - 1);
+      if(offset) {
+        offset = alignment - offset;
+      }
+      new_data += offset;
+      new_size -= offset;
+      memorypa_pool_block_set_data_offset(new_data, (unsigned short)offset);
+      size_t offset_size = memorypa_pool_get_block_size(pool) - (data - default_data);
+      memcpy(new_data, data, offset_size < new_size ? offset_size : new_size);
+      memorypa_pool_deallocate(block);
     }
     memorypa_write_message("memorypa: Pool #", MEMORYPA_WRITE_OPTION_STDERR);
     memorypa_write_decimal(power, 0, MEMORYPA_WRITE_OPTION_STDERR);
     memorypa_write_message(" is out of memory for size ", MEMORYPA_WRITE_OPTION_STDERR);
     memorypa_write_decimal(new_size, 0, MEMORYPA_WRITE_OPTION_STDERR);
-    memorypa_write_message("!\n", MEMORYPA_WRITE_OPTION_STDERR);
-    return new_default_data;
+    memorypa_write_message("! (8)\n", MEMORYPA_WRITE_OPTION_STDERR);
   }
-  memorypa_write_message("memorypa: Pool #", MEMORYPA_WRITE_OPTION_STDERR);
-  memorypa_write_decimal(power, 0, MEMORYPA_WRITE_OPTION_STDERR);
-  memorypa_write_message(" has not been initialized for size ", MEMORYPA_WRITE_OPTION_STDERR);
-  memorypa_write_decimal(new_size, 0, MEMORYPA_WRITE_OPTION_STDERR);
-  memorypa_write_message("!\n", MEMORYPA_WRITE_OPTION_STDERR);
-  return NULL;
+  else {
+    new_data = memorypa_pool_block_get_data(new_data);
+    size_t offset = (size_t)new_data & (alignment - 1);
+    if(offset) {
+      offset = alignment - offset;
+    }
+    new_data += offset;
+    new_size -= offset;
+    memorypa_pool_block_set_data_offset(new_data, (unsigned short)offset);
+    size_t offset_size = memorypa_pool_get_block_size(pool) - (data - default_data);
+    memcpy(new_data, data, offset_size < new_size ? offset_size : new_size);
+    memorypa_pool_deallocate(block);
+  }
+  return new_data;
 }
 
 static inline unsigned char * memorypa_own_profile_aligned_malloc(size_t size, unsigned short alignment) {
@@ -940,6 +1041,7 @@ unsigned char memorypa_initialize() {
   #endif
   // Recover original allocation functions:
   memorypa_given_malloc = functions.malloc;
+  memorypa_given_realloc = functions.realloc;
   memorypa_given_free = functions.free;
   // For MSB function:
   memorypa_size_t_half_bit_size_next_power = 1;
@@ -1172,6 +1274,9 @@ size_t memorypa_malloc_usable_size(void *data) {
   // Calling "memorypa_pool_block_get_data" in case of alignment:
   unsigned char *default_data = memorypa_pool_block_get_data(pool);
   pool = memorypa_pool_block_get_pool(pool);
+  if(pool == NULL) {
+    return 0;
+  }
   return memorypa_pool_get_block_size(pool) - ((unsigned char *)data - default_data);
 }
 

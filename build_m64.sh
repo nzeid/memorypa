@@ -27,6 +27,7 @@ gcc -c -O3 -std=c11 -Wpedantic -Wall -Wextra -Wpointer-arith -Werror=vla -m64 -f
 gcc -shared -std=c11 -Wpedantic -Wall -Wextra -Wpointer-arith -Werror=vla -m64 -o lib64/libmemorypa.so lib64/libmemorypa.o -lc
 printf "gcc...\n"
 gcc -std=c11 -Wpedantic -Wall -Wextra -Wpointer-arith -Werror=vla -m64 -Wl,-rpath,\$ORIGIN/lib64 -I./include src/test_memorypa.c -o bin/test_memorypa_c -L./lib64 -lmemorypa -lpthread
+gcc -std=c11 -Wpedantic -Wall -Wextra -Wpointer-arith -Werror=vla -m64 -Wl,-rpath,\$ORIGIN/lib64 -I./include -DMEMORYPA_TEST_RESCUE src/test_memorypa.c -o bin/test_memorypa_rescue_c -L./lib64 -lmemorypa -lpthread
 gcc -std=c11 -Wpedantic -Wall -Wextra -Wpointer-arith -Werror=vla -m64 src/benchmark.c -o bin/benchmark_c -lpthread -lc
 gcc -std=c11 -Wpedantic -Wall -Wextra -Wpointer-arith -Werror=vla -m64 -Wl,-rpath,\$ORIGIN/lib64 -I./include src/benchmark_memorypa.c -o bin/benchmark_memorypa_c -L./lib64 -lmemorypa -lpthread
 gcc -std=c11 -Wpedantic -Wall -Wextra -Wpointer-arith -Werror=vla -m64 -Wl,-rpath,\$ORIGIN/lib64 -I./include src/example_standard.c -o bin/example_standard_c -L./lib64 -lmemorypa
@@ -35,6 +36,7 @@ gcc -std=c11 -Wpedantic -Wall -Wextra -Wpointer-arith -Werror=vla -m64 -Wl,-rpat
 gcc -std=c11 -Wpedantic -Wall -Wextra -Wpointer-arith -Werror=vla -m64 -Wl,-rpath,\$ORIGIN/lib64 -I./include src/example_with_overriding_and_alignment.c -o bin/example_with_overriding_and_alignment_c -L./lib64 -lmemorypa -ldl
 printf "g++...\n"
 g++ -std=c++11 -Wpedantic -Wall -Wextra -Wpointer-arith -Werror=vla -m64 -Wl,-rpath,\$ORIGIN/lib64 -I./include src/test_memorypa.c -o bin/test_memorypa_cpp -L./lib64 -lmemorypa -lpthread
+g++ -std=c++11 -Wpedantic -Wall -Wextra -Wpointer-arith -Werror=vla -m64 -Wl,-rpath,\$ORIGIN/lib64 -I./include -DMEMORYPA_TEST_RESCUE src/test_memorypa.c -o bin/test_memorypa_rescue_cpp -L./lib64 -lmemorypa -lpthread
 g++ -std=c++11 -Wpedantic -Wall -Wextra -Wpointer-arith -Werror=vla -m64 src/benchmark.c -o bin/benchmark_cpp -lpthread -lc
 g++ -std=c++11 -Wpedantic -Wall -Wextra -Wpointer-arith -Werror=vla -m64 -Wl,-rpath,\$ORIGIN/lib64 -I./include src/benchmark_memorypa.c -o bin/benchmark_memorypa_cpp -L./lib64 -lmemorypa -lpthread
 g++ -std=c++11 -Wpedantic -Wall -Wextra -Wpointer-arith -Werror=vla -m64 -Wl,-rpath,\$ORIGIN/lib64 -I./include src/example_standard.c -o bin/example_standard_cpp -L./lib64 -lmemorypa

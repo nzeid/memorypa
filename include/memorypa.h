@@ -57,6 +57,7 @@ const size_t memorypa_one = 1;
 
 typedef struct {
   void *(*malloc)(size_t);
+  void *(*realloc)(void*,size_t);
   void (*free)(void*);
 } memorypa_functions;
 
